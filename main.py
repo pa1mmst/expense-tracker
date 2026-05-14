@@ -14,6 +14,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Expense Tracker", lifespan=lifespan)
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 def expense_from_row(row) -> dict:
     return {
         "id": row["id"],
