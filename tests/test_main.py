@@ -55,6 +55,14 @@ class TestExpenseTracker:
         assert response.status_code == 200
         assert len(response.json()) >= 2
 
+    def test_list_expenses_filter_from_to(self):
+        response = client.get("/expenses?from=2025-01-01&to=2025-01-31")
+        assert response.status_code == 200
+        assert len(response.json()) >= 2
+        for e in response.json():
+            assert e["date"] >= "2025-01-01"
+            assert e["date"] <= "2025-01-31"
+
     def test_get_single_expense(self):
         resp = client.post("/expenses", json={"amount": 99, "category": "Other", "date": "2025-02-01"})
         eid = resp.json()["id"]

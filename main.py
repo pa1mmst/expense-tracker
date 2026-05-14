@@ -40,6 +40,8 @@ def add_expense(expense: ExpenseCreate):
 @app.get("/expenses", response_model=list[ExpenseResponse])
 def list_expenses(
     category: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
     date_from: Optional[str] = Query(None, alias="date_from"),
     date_to: Optional[str] = Query(None, alias="date_to"),
 ):
@@ -49,6 +51,12 @@ def list_expenses(
     if category:
         query += " AND category = ?"
         params.append(category)
+    if from_date:
+        query += " AND date >= ?"
+        params.append(from_date)
+    if to_date:
+        query += " AND date <= ?"
+        params.append(to_date)
     if date_from:
         query += " AND date >= ?"
         params.append(date_from)
