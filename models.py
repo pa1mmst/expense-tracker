@@ -4,6 +4,7 @@ from datetime import date as date_type
 
 
 class ExpenseCreate(BaseModel):
+    title: str = Field(..., max_length=100)
     amount: float = Field(..., gt=0)
     category: str = Field(..., min_length=1)
     description: str = ""
@@ -11,6 +12,7 @@ class ExpenseCreate(BaseModel):
 
 
 class ExpenseUpdate(BaseModel):
+    title: Optional[str] = Field(None, max_length=100)
     amount: Optional[float] = Field(None, gt=0)
     category: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = None
@@ -19,6 +21,7 @@ class ExpenseUpdate(BaseModel):
 
 class ExpenseResponse(BaseModel):
     id: int
+    title: str
     amount: float
     category: str
     description: str

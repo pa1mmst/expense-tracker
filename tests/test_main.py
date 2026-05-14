@@ -25,6 +25,7 @@ def teardown_module():
 class TestExpenseTracker:
     def test_add_expense(self):
         response = client.post("/expenses", json={
+            "title": "Lunch at cafe",
             "amount": 25.50,
             "category": "Food",
             "description": "Lunch",
@@ -32,6 +33,7 @@ class TestExpenseTracker:
         })
         assert response.status_code == 201
         data = response.json()
+        assert data["title"] == "Lunch at cafe"
         assert data["amount"] == 25.50
         assert data["category"] == "Food"
         assert data["description"] == "Lunch"
@@ -39,7 +41,7 @@ class TestExpenseTracker:
         assert "id" in data
 
     def test_list_expenses(self):
-        client.post("/expenses", json={"amount": 10, "category": "Transport", "date": "2025-01-16"})
+        client.post("/expenses", json={"title": "Bus ticket", "amount": 10, "category": "Transport", "date": "2025-01-16"})
         response = client.get("/expenses")
         assert response.status_code == 200
         assert len(response.json()) >= 2
@@ -64,10 +66,11 @@ class TestExpenseTracker:
             assert e["date"] <= "2025-01-31"
 
     def test_get_single_expense(self):
-        resp = client.post("/expenses", json={"amount": 99, "category": "Other", "date": "2025-02-01"})
+        resp = client.post("/expenses", json={"title": "Random", "amount": 99, "category": "Other", "date": "2025-02-01"})
         eid = resp.json()["id"]
         response = client.get(f"/expenses/{eid}")
         assert response.status_code == 200
+        assert response.json()["title"] == "Random"
         assert response.json()["amount"] == 99
 
     def test_get_expense_not_found(self):
@@ -75,11 +78,12 @@ class TestExpenseTracker:
         assert response.status_code == 404
 
     def test_update_expense(self):
-        resp = client.post("/expenses", json={"amount": 50, "category": "Food", "date": "2025-03-01"})
+        resp = client.post("/expenses", json={"title": "Groceries", "amount": 50, "category": "Food", "date": "2025-03-01"})
         eid = resp.json()["id"]
         response = client.put(f"/expenses/{eid}", json={"amount": 75, "description": "Updated"})
         assert response.status_code == 200
         data = response.json()
+        assert data["title"] == "Groceries"
         assert data["amount"] == 75
         assert data["description"] == "Updated"
 
@@ -88,7 +92,7 @@ class TestExpenseTracker:
         assert response.status_code == 404
 
     def test_delete_expense(self):
-        resp = client.post("/expenses", json={"amount": 1, "category": "Misc", "date": "2025-04-01"})
+        resp = client.post("/expenses", json={"title": "Trash", "amount": 1, "category": "Misc", "date": "2025-04-01"})
         eid = resp.json()["id"]
         response = client.delete(f"/expenses/{eid}")
         assert response.status_code == 204

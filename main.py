@@ -22,6 +22,7 @@ def health():
 def expense_from_row(row) -> dict:
     return {
         "id": row["id"],
+        "title": row["title"],
         "amount": row["amount"],
         "category": row["category"],
         "description": row["description"],
@@ -33,8 +34,8 @@ def expense_from_row(row) -> dict:
 def add_expense(expense: ExpenseCreate):
     conn = get_connection()
     cursor = conn.execute(
-        "INSERT INTO expenses (amount, category, description, date) VALUES (?, ?, ?, ?)",
-        (expense.amount, expense.category, expense.description, expense.date),
+        "INSERT INTO expenses (title, amount, category, description, date) VALUES (?, ?, ?, ?, ?)",
+        (expense.title, expense.amount, expense.category, expense.description, expense.date),
     )
     conn.commit()
     row = conn.execute("SELECT * FROM expenses WHERE id = ?", (cursor.lastrowid,)).fetchone()
@@ -94,7 +95,7 @@ def update_expense(expense_id: int, expense: ExpenseUpdate):
         conn.close()
         raise HTTPException(status_code=404, detail="Expense not found")
 
-    fields = {"amount", "category", "description", "date"}
+    fields = {"title", "amount", "category", "description", "date"}
     updates = {k: getattr(expense, k) for k in fields if getattr(expense, k) is not None}
 
     if not updates:

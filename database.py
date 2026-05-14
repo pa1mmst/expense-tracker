@@ -18,7 +18,8 @@ def create_tables():
             amount REAL NOT NULL,
             category TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '',
-            date TEXT NOT NULL
+            date TEXT NOT NULL,
+            title TEXT NOT NULL DEFAULT ''
         )
     """)
     conn.commit()
