@@ -1,6 +1,13 @@
 import pytest
+import os
 from fastapi.testclient import TestClient
 from main import app
+from database import create_tables, DB_PATH
+
+# Clean DB and create tables before tests
+if os.path.exists(DB_PATH):
+    os.remove(DB_PATH)
+create_tables()
 
 client = TestClient(app)
 
@@ -33,7 +40,6 @@ def test_list_expenses():
 
 
 def test_get_expense():
-    # Add first
     resp = client.post("/expenses", json={
         "title": "Test",
         "amount": 10.0,
