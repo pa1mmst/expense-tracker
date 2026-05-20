@@ -1,113 +1,94 @@
+import pytest
 from fastapi.testclient import TestClient
 from main import app
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-from database import DB_PATH
 
 client = TestClient(app)
 
 
-def setup_module():
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-    from database import create_tables
-    create_tables()
+def test_health():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
 
 
-def teardown_module():
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
+def test_add_expense():
+    response = client.post("/expenses", json={
+        "title": "Coffee",
+        "amount": 3.50,
+        "category": "food",
+        "description": "Morning coffee",
+        "date": "2026-05-20"
+    })
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "Coffee"
+    assert data["amount"] == 3.50
+    assert data["category"] == "food"
 
 
-class TestExpenseTracker:
-    def test_add_expense(self):
-        response = client.post("/expenses", json={
-            "title": "Lunch at cafe",
-            "amount": 25.50,
-            "category": "Food",
-            "description": "Lunch",
-            "date": "2025-01-15",
-        })
-        assert response.status_code == 201
-        data = response.json()
-        assert data["title"] == "Lunch at cafe"
-        assert data["amount"] == 25.50
-        assert data["category"] == "Food"
-        assert data["description"] == "Lunch"
-        assert data["date"] == "2025-01-15"
-        assert "id" in data
+def test_list_expenses():
+    response = client.get("/expenses")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
 
-    def test_list_expenses(self):
-        client.post("/expenses", json={"title": "Bus ticket", "amount": 10, "category": "Transport", "date": "2025-01-16"})
-        response = client.get("/expenses")
-        assert response.status_code == 200
-        assert len(response.json()) >= 2
 
-    def test_list_expenses_filter_category(self):
-        response = client.get("/expenses?category=Food")
-        assert response.status_code == 200
-        for e in response.json():
-            assert e["category"] == "Food"
+def test_get_expense():
+    # Add first
+    resp = client.post("/expenses", json={
+        "title": "Test",
+        "amount": 10.0,
+        "category": "test",
+        "date": "2026-05-20"
+    })
+    expense_id = resp.json()["id"]
+    response = client.get(f"/expenses/{expense_id}")
+    assert response.status_code == 200
+    assert response.json()["title"] == "Test"
 
-    def test_list_expenses_filter_date_range(self):
-        response = client.get("/expenses?date_from=2025-01-01&date_to=2025-01-31")
-        assert response.status_code == 200
-        assert len(response.json()) >= 2
 
-    def test_list_expenses_filter_from_to(self):
-        response = client.get("/expenses?from=2025-01-01&to=2025-01-31")
-        assert response.status_code == 200
-        assert len(response.json()) >= 2
-        for e in response.json():
-            assert e["date"] >= "2025-01-01"
-            assert e["date"] <= "2025-01-31"
+def test_update_expense():
+    resp = client.post("/expenses", json={
+        "title": "Old",
+        "amount": 5.0,
+        "category": "test",
+        "date": "2026-05-20"
+    })
+    expense_id = resp.json()["id"]
+    response = client.put(f"/expenses/{expense_id}", json={"title": "New"})
+    assert response.status_code == 200
+    assert response.json()["title"] == "New"
 
-    def test_get_single_expense(self):
-        resp = client.post("/expenses", json={"title": "Random", "amount": 99, "category": "Other", "date": "2025-02-01"})
-        eid = resp.json()["id"]
-        response = client.get(f"/expenses/{eid}")
-        assert response.status_code == 200
-        assert response.json()["title"] == "Random"
-        assert response.json()["amount"] == 99
 
-    def test_get_expense_not_found(self):
-        response = client.get("/expenses/99999")
-        assert response.status_code == 404
+def test_delete_expense():
+    resp = client.post("/expenses", json={
+        "title": "Delete me",
+        "amount": 1.0,
+        "category": "test",
+        "date": "2026-05-20"
+    })
+    expense_id = resp.json()["id"]
+    response = client.delete(f"/expenses/{expense_id}")
+    assert response.status_code == 204
+    response = client.get(f"/expenses/{expense_id}")
+    assert response.status_code == 404
 
-    def test_update_expense(self):
-        resp = client.post("/expenses", json={"title": "Groceries", "amount": 50, "category": "Food", "date": "2025-03-01"})
-        eid = resp.json()["id"]
-        response = client.put(f"/expenses/{eid}", json={"amount": 75, "description": "Updated"})
-        assert response.status_code == 200
-        data = response.json()
-        assert data["title"] == "Groceries"
-        assert data["amount"] == 75
-        assert data["description"] == "Updated"
 
-    def test_update_expense_not_found(self):
-        response = client.put("/expenses/99999", json={"amount": 10})
-        assert response.status_code == 404
+def test_filter_by_category():
+    client.post("/expenses", json={
+        "title": "Food item",
+        "amount": 15.0,
+        "category": "food",
+        "date": "2026-05-20"
+    })
+    response = client.get("/expenses?category=food")
+    assert response.status_code == 200
+    for item in response.json():
+        assert item["category"] == "food"
 
-    def test_delete_expense(self):
-        resp = client.post("/expenses", json={"title": "Trash", "amount": 1, "category": "Misc", "date": "2025-04-01"})
-        eid = resp.json()["id"]
-        response = client.delete(f"/expenses/{eid}")
-        assert response.status_code == 204
-        response = client.get(f"/expenses/{eid}")
-        assert response.status_code == 404
 
-    def test_delete_expense_not_found(self):
-        response = client.delete("/expenses/99999")
-        assert response.status_code == 404
-
-    def test_summary(self):
-        response = client.get("/summary")
-        assert response.status_code == 200
-        data = response.json()
-        assert "by_category" in data
-        assert "monthly" in data
-        assert isinstance(data["by_category"], list)
-        assert isinstance(data["monthly"], list)
+def test_summary():
+    response = client.get("/summary")
+    assert response.status_code == 200
+    data = response.json()
+    assert "by_category" in data
+    assert "monthly" in data

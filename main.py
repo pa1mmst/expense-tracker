@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException, Query
 from typing import Optional
 from contextlib import asynccontextmanager
 from database import get_connection, create_tables
-from models import ExpenseCreate, ExpenseUpdate, ExpenseResponse, SummaryResponse, CategorySummary, MonthlySummary
 
 
 @asynccontextmanager
@@ -30,12 +29,12 @@ def expense_from_row(row) -> dict:
     }
 
 
-@app.post("/expenses", response_model=ExpenseResponse, status_code=201)
-def add_expense(expense: ExpenseCreate):
+@app.post("/expenses", status_code=201)
+def add_expense(expense: dict):
     conn = get_connection()
     cursor = conn.execute(
         "INSERT INTO expenses (title, amount, category, description, date) VALUES (?, ?, ?, ?, ?)",
-        (expense.title, expense.amount, expense.category, expense.description, expense.date),
+        (expense.get("title"), expense.get("amount"), expense.get("category"), expense.get("description"), expense.get("date")),
     )
     conn.commit()
     row = conn.execute("SELECT * FROM expenses WHERE id = ?", (cursor.lastrowid,)).fetchone()
@@ -43,7 +42,7 @@ def add_expense(expense: ExpenseCreate):
     return expense_from_row(row)
 
 
-@app.get("/expenses", response_model=list[ExpenseResponse])
+@app.get("/expenses")
 def list_expenses(
     category: Optional[str] = Query(None),
     from_date: Optional[str] = Query(None, alias="from"),
@@ -77,7 +76,7 @@ def list_expenses(
     return [expense_from_row(r) for r in rows]
 
 
-@app.get("/expenses/{expense_id}", response_model=ExpenseResponse)
+@app.get("/expenses/{expense_id}")
 def get_expense(expense_id: int):
     conn = get_connection()
     row = conn.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,)).fetchone()
@@ -87,8 +86,8 @@ def get_expense(expense_id: int):
     return expense_from_row(row)
 
 
-@app.put("/expenses/{expense_id}", response_model=ExpenseResponse)
-def update_expense(expense_id: int, expense: ExpenseUpdate):
+@app.put("/expenses/{expense_id}")
+def update_expense(expense_id: int, expense: dict):
     conn = get_connection()
     row = conn.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,)).fetchone()
     if not row:
@@ -96,7 +95,7 @@ def update_expense(expense_id: int, expense: ExpenseUpdate):
         raise HTTPException(status_code=404, detail="Expense not found")
 
     fields = {"title", "amount", "category", "description", "date"}
-    updates = {k: getattr(expense, k) for k in fields if getattr(expense, k) is not None}
+    updates = {k: v for k, v in expense.items() if k in fields and v is not None}
 
     if not updates:
         conn.close()
@@ -124,7 +123,7 @@ def delete_expense(expense_id: int):
     conn.close()
 
 
-@app.get("/summary", response_model=SummaryResponse)
+@app.get("/summary")
 def get_summary():
     conn = get_connection()
 
@@ -138,7 +137,7 @@ def get_summary():
 
     conn.close()
 
-    return SummaryResponse(
-        by_category=[CategorySummary(category=r["category"], total=r["total"]) for r in by_category_rows],
-        monthly=[MonthlySummary(month=r["month"], total=r["total"]) for r in monthly_rows],
-    )
+    return {
+        "by_category": [{"category": r["category"], "total": r["total"]} for r in by_category_rows],
+        "monthly": [{"month": r["month"], "total": r["total"]} for r in monthly_rows],
+    }
