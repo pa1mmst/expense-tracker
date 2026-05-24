@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Folio — Expense Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --bg-hover: #1c2128;
+  --bg-active: #292e36;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #484f58;
+  --text-accent: #58a6ff;
+  --accent-primary: #a78bfa;
+  --accent-hover: #8b5cf6;
+  --accent-glow: rgba(167, 139, 250, 0.2);
+  --border-default: #30363d;
+  --border-muted: #21262d;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-size-xs: 0.6875rem;
+  --font-size-sm: 0.813rem;
+  --font-size-base: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.375rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --sidebar-width: 260px;
+  --note-list-width: 300px;
+  --header-height: 48px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--font-sans);
+  font-size:var(--font-size-base);
+  color:var(--text-primary);
+  background:var(--bg-primary);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg-tertiary);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+#app{
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  overflow:hidden;
+}
+
+/* Header */
+#header{
+  height:var(--header-height);
+  display:flex;
+  align-items:center;
+  padding:0 var(--space-4);
+  background:var(--bg-secondary);
+  border-bottom:1px solid var(--border-default);
+  gap:var(--space-3);
+  flex-shrink:0;
+  z-index:100;
+}
+#header .logo{
+  display:flex;
+  align-items:center;
+  gap:var(--space-2);
+  font-weight:600;
+  font-size:var(--font-size-md);
+  color:var(--text-primary);
+  text-decoration:none;
+  white-space:nowrap;
+}
+#header .logo svg{flex-shrink:0}
+#header .logo span{color:var(--text-secondary);font-weight:400}
+#header .search-box{
+  flex:1;
+  max-width:400px;
+  position:relative;
+  margin:0 var(--space-3);
+}
+#header .search-box input{
+  width:100%;
+  height:32px;
+  padding:0 var(--space-3) 0 32px;
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-muted);
+  border-radius:var(--radius-sm);
+  color:var(--text-primary);
+  font-size:var(--font-size-sm);
+  font-family:var(--font-sans);
+  outline:none;
+  transition:border-color var(--duration-fast) var(--ease-smooth);
+}
+#header .search-box input:focus{border-color:var(--accent-primary)}
+#header .search-box input::placeholder{color:var(--text-muted)}
+#header .search-box .search-icon{
+  position:absolute;
+  left:10px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--text-muted);
+  pointer-events:none;
+}
+#header .actions{
+  display:flex;
+  align-items:center;
+  gap:var(--space-2);
+}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:var(--space-2);
+  height:32px;
+  padding:0 var(--space-3);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius-sm);
+  background:var(--bg-tertiary);
+  color:var(--text-primary);
+  font-size:var(--font-size-sm);
+  font-family:var(--font-sans);
+  cursor:pointer;
+  transition:all var(--duration-fast) var(--ease-smooth);
+  white-space:nowrap;
+}
+.btn:hover{background:var(--bg-hover);border-color:var(--text-muted)}
+.btn-primary{
+  background:var(--accent-primary);
+  color:#fff;
+  border-color:var(--accent-primary);
+}
+.btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn-ghost{
+  background:transparent;
+  border-color:transparent;
+  color:var(--text-secondary);
+}
+.btn-ghost:hover{background:var(--bg-hover);color:var(--text-primary)}
+.btn-danger{
+  background:transparent;
+  border-color:var(--border-default);
+  color:#f85149;
+}
+.btn-danger:hover{background:rgba(248,81,73,0.1);border-color:#f85149}
+.btn-icon{
+  width:32px;
+  padding:0;
+}
+.btn-sm{height:28px;padding:0 var(--space-2);font-size:var(--font-size-xs)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+/* Main layout */
+#main{
+  display:flex;
+  flex:1;
+  overflow:hidden;
+  position:relative;
+}
+
+/* Sidebar */
+#sidebar{
+  width:var(--sidebar-width);
+  min-width:var(--sidebar-width);
+  background:var(--bg-secondary);
+  border-right:1px solid var(--border-default);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  transition:margin-left var(--duration-normal) var(--ease-out-expo);
+}
+#sidebar.collapsed{margin-left:calc(var(--sidebar-width)*-1)}
+#sidebar .sidebar-inner{
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  overflow-y:auto;
+  padding:var(--space-2) 0;
+}
+.sidebar-section{
+  margin-bottom:var(--space-1);
+}
+.section-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:var(--space-2) var(--space-4);
+  font-size:var(--font-size-xs);
+  font-weight:600;
+  color:var(--text-muted);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  cursor:pointer;
+  user-select:none;
+  transition:color var(--duration-fast) var(--ease-smooth);
+}
+.section-header:hover{color:var(--text-secondary)}
+.section-header .collapse-icon{
+  transition:transform var(--duration-fast) var(--ease-smooth);
+}
+.section-header .collapse-icon.collapsed{transform:rotate(-90deg)}
+.section-items{overflow:hidden;transition:max-height var(--duration-normal) var(--ease-smooth)}
+.section-items.collapsed{max-height:0!important}
+.sidebar-item{
+  display:flex;
+  align-items:center;
+  gap:var(--space-2);
+  padding:var(--space-1) var(--space-4);
+  font-size:var(--font-size-sm);
+  color:var(--text-secondary);
+  cursor:pointer;
+  border-left:2px solid transparent;
+  transition:all var(--duration-fast) var(--ease-smooth);
+  text-decoration:none;
+}
+.sidebar-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+.sidebar-item.active{
+  background:var(--bg-active);
+  color:var(--text-primary);
+  border-left-color:var(--accent-primary);
+}
+.sidebar-item .item-icon{
+  width:16px;
+  height:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  color:var(--text-muted);
+}
+.sidebar-item .item-count{
+  margin-left:auto;
+  font-size:var(--font-size-xs);
+  color:var(--text-muted);
+  background:var(--bg-tertiary);
+  padding:1px 6px;
+  border-radius:10px;
+}
+.sidebar-item .item-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+/* Note List */
+#note-list{
+  width:var(--note-list-width);
+  min-width:var(--note-list-width);
+  background:var(--bg-primary);
+  border-right:1px solid var(--border-default);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+#note-list .list-header{
+  padding:var(--space-3) var(--space-4);
+  border-bottom:1px solid var(--border-default);
+  font-size:var(--font-size-sm);
+  font-weight:600;
+  color:var(--text-secondary);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+  min-height:42px;
+}
+#note-list .list-header .count{font-weight:400;color:var(--text-muted)}
+#note-list .list-items{
+  flex:1;
+  overflow-y:auto;
+}
+.note-item{
+  padding:var(--space-3) var(--space-4);
+  border-bottom:1px solid var(--border-muted);
+  cursor:pointer;
+  transition:background var(--duration-fast) var(--ease-smooth);
+  border-left:3px solid transparent;
+  position:relative;
+}
+.note-item:hover{background:var(--bg-hover)}
+.note-item.selected{
+  background:var(--bg-active);
+  border-left-color:var(--accent-primary);
+}
+.note-item .note-title{
+  font-size:var(--font-size-sm);
+  font-weight:500;
+  color:var(--text-primary);
+  margin-bottom:var(--space-1);
+  display:flex;
+  align-items:center;
+  gap:var(--space-2);
+}
+.note-item .note-amount{
+  font-size:var(--font-size-md);
+  font-weight:600;
+  color:var(--accent-primary);
+  margin-left:auto;
+}
+.note-item .note-preview{
+  font-size:var(--font-size-xs);
+  color:var(--text-muted);
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  line-height:1.4;
+  margin-bottom:var(--space-1);
+}
+.note-item .note-meta{
+  display:flex;
+  align-items:center;
+  gap:var(--space-2);
+  font-size:var(--font-size-xs);
+  color:var(--text-muted);
+}
+.note-item .category-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:1px 6px;
+  border-radius:4px;
+  font-size:var(--font-size-xs);
+  font-weight:500;
+  background:var(--bg-tertiary);
+  color:var(--text-secondary);
+}
+.note-item .category-badge.food{background:rgba(88,166,255,0.15);color:#58a6ff}
+.note-item .category-badge.transport{background:rgba(167,139,250,0.15);color:#a78bfa}
+.note-item .category-badge.entertainment{background:rgba(248,168,84,0.15);color:#f8a854}
+.note-item .category-badge.utilities{background:rgba(63,185,80,0.15);color:#3fb950}
+.note-item .category-badge.shopping{background:rgba(240,130,160,0.15);color:#f082a0}
+.note-item .category-badge.health{background:rgba(210,153,250,0.15);color:#d299fd}
+.note-item .category-badge.education{background:rgba(130,200,255,0.15);color:#82c8ff}
+.note-item .category-badge.other{background:var(--bg-tertiary);color:var(--text-secondary)}
+
+/* Editor */
+#editor{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:var(--bg-primary);
+}
+#editor .editor-empty{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:var(--space-3);
+  color:var(--text-muted);
+  padding:var(--space-8);
+}
+#editor .editor-empty svg{opacity:0.3}
+#editor .editor-empty h3{font-size:var(--font-size-lg);font-weight:600;color:var(--text-secondary)}
+#editor .editor-empty p{font-size:var(--font-size-sm);text-align:center;max-width:300px;line-height:1.5}
+#editor .editor-scroll{
+  flex:1;
+  overflow-y:auto;
+  padding:var(--space-6) var(--space-8);
+  max-width:800px;
+  margin:0 auto;
+  width:100%;
+}
+#editor .editor-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:var(--space-6);
+  padding-bottom:var(--space-4);
+  border-bottom:1px solid var(--border-muted);
+}
+#editor .editor-header h2{
+  font-size:var(--font-size-xl);
+  font-weight:700;
+  color:var(--text-primary);
+  line-height:1.3;
+}
+#editor .editor-header .header-actions{
+  display:flex;
+  gap:var(--space-2);
+}
+.editor-field{
+  margin-bottom:var(--space-4);
+}
+.editor-field label{
+  display:block;
+  font-size:var(--font-size-xs);
+  font-weight:600;
+  color:var(--text-muted);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin-bottom:var(--space-2);
+}
+.editor-field .field-value{
+  font-size:var(--font-size-base);
+  color:var(--text-primary);
+  line-height:1.6;
+}
+.editor-field .field-value.mono{font-family:var(--font-mono);font-size:var(--font-size-lg);font-weight:600;color:var(--accent-primary)}
+.editor-field input,.editor-field textarea,.editor-field select{
+  width:100%;
+  padding:var(--space-2) var(--space-3);
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius-sm);
+  color:var(--text-primary);
+  font-size:var(--font-size-base);
+  font-family:var(--font-sans);
+  outline:none;
+  transition:border-color var(--duration-fast) var(--ease-smooth);
+}
+.editor-field input:focus,.editor-field textarea:focus,.editor-field select:focus{border-color:var(--accent-primary)}
+.editor-field textarea{min-height:120px;resize:vertical;font-family:var(--font-mono);font-size:var(--font-size-sm);line-height:1.6}
+.editor-field select{appearance:none;cursor:pointer}
+.editor-field select option{background:var(--bg-secondary);color:var(--text-primary)}
+.editor-content{margin-bottom:var(--space-8)}
+.editor-description{
+  font-size:var(--font-size-sm);
+  color:var(--text-secondary);
+  line-height:1.7;
+  white-space:pre-wrap;
+}
+.editor-description p{margin-bottom:var(--space-3)}
+.editor-description code{
+  font-family:var(--font-mono);
+  font-size:var(--font-size-xs);
+  background:var(--bg-tertiary);
+  padding:2px 6px;
+  border-radius:3px;
+  color:var(--accent-primary);
+}
+.editor-description pre{
+  background:var(--bg-secondary);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius-md);
+  padding:var(--space-4);
+  overflow-x:auto;
+  margin-bottom:var(--space-4);
+}
+.editor-description pre code{background:none;padding:0;color:var(--text-primary)}
+.editor-description blockquote{
+  border-left:3px solid var(--accent-primary);
+  padding-left:var(--space-4);
+  margin:var(--space-4) 0;
+  color:var(--text-secondary);
+  font-style:italic;
+}
+.editor-description ul,.editor-description ol{padding-left:var(--space-6);margin-bottom:var(--space-3)}
+.editor-description li{margin-bottom:var(--space-1)}
+.editor-description h1,.editor-description h2,.editor-description h3,.editor-description h4{margin-top:var(--space-6);margin-bottom:var(--space-3);color:var(--text-primary);font-weight:600}
+.editor-description h1{font-size:var(--font-size-xl)}
+.editor-description h2{font-size:var(--font-size-lg)}
+.editor-description h3{font-size:var(--font-size-md)}
+.editor-description a{color:var(--text-accent);text-decoration:none}
+.editor-description a:hover{text-decoration:underline}
+.editor-description .wiki-link{color:var(--accent-primary);font-weight:500;cursor:pointer}
+.editor-description .wiki-link:hover{text-decoration:underline}
+.editor-footer{
+  display:flex;
+  align-items:center;
+  gap:var(--space-2);
+  padding-top:var(--space-4);
+  border-top:1px solid var(--border-muted);
+  margin-top:var(--space-6);
+}
+
+/* Add form */
+#add-form{max-width:500px}
+#add-form .form-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)}
+
+/* Graph View */
+#graph-view{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:var(--bg-primary);
+}
+#graph-view .graph-header{
+  padding:var(--space-3) var(--space-4);
+  border-bottom:1px solid var(--border-default);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+#graph-view .graph-header h2{font-size:var(--font-size-sm);font-weight:600;color:var(--text-secondary)}
+#graph-view .graph-container{
+  flex:1;
+  overflow:hidden;
+  position:relative;
+}
+#graph-view .graph-container svg{width:100%;height:100%}
+.graph-node circle{stroke:var(--bg-primary);stroke-width:2;cursor:pointer;transition:r var(--duration-fast) var(--ease-smooth)}
+.graph-node:hover circle{filter:drop-shadow(0 0 8px var(--accent-glow))}
+.graph-node text{fill:var(--text-secondary);font-size:10px;font-family:var(--font-sans);pointer-events:none}
+.graph-link{stroke:var(--border-muted);stroke-opacity:0.6}
+.graph-tooltip{
+  position:absolute;
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius-md);
+  padding:var(--space-3);
+  font-size:var(--font-size-xs);
+  color:var(--text-primary);
+  pointer-events:none;
+  opacity:0;
+  transition:opacity var(--duration-fast) var(--ease-smooth);
+  z-index:1000;
+  max-width:200px;
+}
+.graph-tooltip.visible{opacity:1}
+.graph-tooltip .tt-title{font-weight:600;margin-bottom:var(--space-1)}
+.graph-tooltip .tt-row{display:flex;justify-content:space-between;gap:var(--space-4);color:var(--text-secondary);margin-bottom:2px}
+
+/* Toast */
+#toast-container{
+  position:fixed;
+  top:calc(var(--header-height) + var(--space-3));
+  right:var(--space-4);
+  z-index:10000;
+  display:flex;
+  flex-direction:column;
+  gap:var(--space-2);
+  pointer-events:none;
+}
+.toast{
+  pointer-events:auto;
+  display:flex;
+  align-items:center;
+  gap:var(--space-3);
+  padding:var(--space-3) var(--space-4);
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius-md);
+  font-size:var(--font-size-sm);
+  color:var(--text-primary);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  animation:toastSlideIn var(--duration-normal) var(--ease-out-expo);
+  max-width:360px;
+}
+.toast.success{border-left:3px solid #3fb950}
+.toast.error{border-left:3px solid #f85149}
+.toast.info{border-left:3px solid var(--accent-primary)}
+.toast .toast-icon{flex-shrink:0;width:18px;height:18px}
+.toast .toast-msg{flex:1;line-height:1.4}
+.toast .toast-close{
+  flex-shrink:0;
+  cursor:pointer;
+  opacity:0.5;
+  transition:opacity var(--duration-fast);
+  background:none;
+  border:none;
+  color:var(--text-secondary);
+  font-size:var(--font-size-base);
+  padding:2px;
+  line-height:1;
+}
+.toast .toast-close:hover{opacity:1}
+@keyframes toastSlideIn{
+  from{transform:translateX(100%);opacity:0}
+  to{transform:translateX(0);opacity:1}
+}
+.toast.removing{animation:toastSlideOut var(--duration-fast) var(--ease-smooth) forwards}
+@keyframes toastSlideOut{
+  from{transform:translateX(0);opacity:1}
+  to{transform:translateX(100%);opacity:0}
+}
+
+/* Skeleton */
+.skeleton{background:linear-gradient(90deg,var(--bg-tertiary) 25%,var(--bg-hover) 50%,var(--bg-tertiary) 75%);background-size:200% 100%;animation:skeletonShimmer 1.5s infinite;border-radius:var(--radius-sm)}
+@keyframes skeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-line{height:14px;margin-bottom:var(--space-2);width:100%}
+.skeleton-line.w60{width:60%}
+.skeleton-line.w40{width:40%}
+.skeleton-line.w80{width:80%}
+.skeleton-line.h24{height:24px}
+.skeleton-line.h32{height:32px}
+.skeleton-item{
+  padding:var(--space-3) var(--space-4);
+  border-bottom:1px solid var(--border-muted);
+}
+.skeleton-item .skeleton-row{display:flex;justify-content:space-between;margin-bottom:var(--space-2)}
+.skeleton-badge{width:50px;height:18px;border-radius:4px}
+
+/* Hotkey hint */
+#hotkey-btn{
+  position:fixed;
+  bottom:var(--space-4);
+  right:var(--space-4);
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-default);
+  color:var(--text-muted);
+  font-size:var(--font-size-sm);
+  font-weight:600;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:all var(--duration-fast) var(--ease-smooth);
+  z-index:50;
+  font-family:var(--font-sans);
+}
+#hotkey-btn:hover{background:var(--bg-hover);color:var(--text-primary);border-color:var(--text-muted)}
+
+/* Modal overlay */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity var(--duration-normal) var(--ease-smooth);
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.active{opacity:1;pointer-events:auto}
+.modal{
+  background:var(--bg-secondary);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius-md);
+  padding:var(--space-6);
+  max-width:480px;
+  width:90%;
+  max-height:80vh;
+  overflow-y:auto;
+  transform:scale(0.95);
+  transition:transform var(--duration-normal) var(--ease-out-expo);
+}
+.modal-overlay.active .modal{transform:scale(1)}
+.modal h2{font-size:var(--font-size-lg);font-weight:600;margin-bottom:var(--space-4);color:var(--text-primary)}
+.modal .close-modal{
+  float:right;
+  background:none;
+  border:none;
+  color:var(--text-muted);
+  cursor:pointer;
+  font-size:var(--font-size-lg);
+  padding:var(--space-1);
+}
+.modal .close-modal:hover{color:var(--text-primary)}
+.hotkey-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:var(--space-3);
+}
+.hotkey-item{
+  display:flex;
+  align-items:center;
+  gap:var(--space-3);
+  padding:var(--space-2) 0;
+}
+.hotkey-item kbd{
+  display:inline-flex;
+  align-items:center;
+  padding:2px 8px;
+  background:var(--bg-tertiary);
+  border:1px solid var(--border-default);
+  border-radius:4px;
+  font-family:var(--font-sans);
+  font-size:var(--font-size-xs);
+  color:var(--text-secondary);
+  min-width:28px;
+  justify-content:center;
+  font-weight:500;
+}
+.hotkey-item .hk-label{font-size:var(--font-size-sm);color:var(--text-secondary)}
+
+/* Mobile toggle */
+#sidebar-toggle{display:none}
+
+/* Mobile sidebar overlay */
+#sidebar-overlay{display:none}
+
+/* Responsive */
+@media(max-width:900px){
+  #note-list{width:240px;min-width:240px}
+}
+@media(max-width:768px){
+  #sidebar{
+    position:fixed;
+    top:var(--header-height);
+    left:0;
+    bottom:0;
+    z-index:200;
+    margin-left:0;
+    box-shadow:4px 0 24px rgba(0,0,0,0.5);
+  }
+  #sidebar.collapsed{margin-left:calc(var(--sidebar-width)*-1)}
+  #sidebar-overlay{
+    display:block;
+    position:fixed;
+    inset:0;
+    top:var(--header-height);
+    background:rgba(0,0,0,0.5);
+    z-index:199;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity var(--duration-normal) var(--ease-smooth);
+  }
+  #sidebar-overlay.active{opacity:1;pointer-events:auto}
+  #sidebar-toggle{
+    display:inline-flex;
+  }
+  #note-list{width:100%;min-width:0}
+  #note-list.hidden{display:none}
+  #editor{display:none}
+  #editor.visible{display:flex;width:100%}
+  #header .search-box{max-width:200px}
+  #header .search-box input:focus{max-width:260px}
+  .hotkey-grid{grid-template-columns:1fr}
+  .note-item .note-amount{font-size:var(--font-size-sm)}
+}
+
+@media(max-width:480px){
+  #header{padding:0 var(--space-2);gap:var(--space-2)}
+  #header .search-box input{padding:0 var(--space-2) 0 28px;font-size:var(--font-size-xs)}
+  #header .search-box .search-icon{left:8px}
+  #header .logo span{display:none}
+  #editor .editor-scroll{padding:var(--space-4)}
+  #add-form .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <header id="header">
+    <button class="btn btn-ghost btn-icon" id="sidebar-toggle" aria-label="Toggle sidebar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <a class="logo" href="/">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Folio <span>/ expenses</span>
+    </a>
+    <div class="search-box">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search-input" placeholder="Search expenses..." autocomplete="off">
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary btn-sm" id="btn-add-expense">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New
+      </button>
+    </div>
+  </header>
+
+  <div id="main">
+    <!-- Sidebar overlay for mobile -->
+    <div id="sidebar-overlay"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-inner">
+        <!-- Categories section -->
+        <div class="sidebar-section" data-section="categories">
+          <div class="section-header">
+            Categories
+            <svg class="collapse-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="section-items" id="sidebar-categories"></div>
+        </div>
+
+        <!-- Views section -->
+        <div class="sidebar-section" data-section="views">
+          <div class="section-header">
+            Views
+            <svg class="collapse-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="section-items" id="sidebar-views">
+            <a class="sidebar-item active" data-view="list" href="#">
+              <span class="item-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </span>
+              All Expenses
+            </a>
+            <a class="sidebar-item" data-view="graph" href="#">
+              <span class="item-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </span>
+              Graph
+            </a>
+          </div>
+        </div>
+
+        <!-- Analytics section -->
+        <div class="sidebar-section" data-section="analytics">
+          <div class="section-header">
+            Summary
+            <svg class="collapse-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="section-items" id="sidebar-summary">
+            <div class="sidebar-item" style="cursor:default;font-size:var(--font-size-xs);color:var(--text-muted);flex-direction:column;align-items:flex-start;gap:var(--space-1)">
+              <div id="summary-total" style="width:100%">...loading</div>
+              <div id="summary-count" style="width:100%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Note List -->
+    <section id="note-list">
+      <div class="list-header">
+        <span>Expenses</span>
+        <span class="count" id="expense-count"></span>
+      </div>
+      <div class="list-items" id="expense-list"></div>
+    </section>
+
+    <!-- Editor -->
+    <main id="editor">
+      <div class="editor-empty" id="editor-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <h3>No expense selected</h3>
+        <p>Choose an expense from the list or create a new one to get started.</p>
+        <button class="btn btn-primary" id="btn-add-from-empty">Add Expense</button>
+      </div>
+      <div class="editor-scroll" id="editor-content" style="display:none"></div>
+    </main>
+
+    <!-- Graph View (hidden by default) -->
+    <div id="graph-view" style="display:none">
+      <div class="graph-header">
+        <h2>Expense Graph</h2>
+        <button class="btn btn-ghost btn-sm" id="btn-graph-close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Close
+        </button>
+      </div>
+      <div class="graph-container" id="graph-container"></div>
+      <div class="graph-tooltip" id="graph-tooltip"></div>
+    </div>
+  </div>
+
+  <!-- Hotkey hint button -->
+  <button id="hotkey-btn" aria-label="Keyboard shortcuts">?</button>
+
+  <!-- Hotkey modal -->
+  <div class="modal-overlay" id="hotkey-modal">
+    <div class="modal">
+      <button class="close-modal" id="close-hotkey-modal">&times;</button>
+      <h2>Keyboard Shortcuts</h2>
+      <div class="hotkey-grid">
+        <div class="hotkey-item"><kbd>n</kbd><span class="hk-label">New expense</span></div>
+        <div class="hotkey-item"><kbd>/</kbd><span class="hk-label">Focus search</span></div>
+        <div class="hotkey-item"><kbd>g</kbd><span class="hk-label">Toggle graph view</span></div>
+        <div class="hotkey-item"><kbd>?</kbd><span class="hk-label">Toggle shortcuts</span></div>
+        <div class="hotkey-item"><kbd>e</kbd><span class="hk-label">Edit selected</span></div>
+        <div class="hotkey-item"><kbd>⌫</kbd><span class="hk-label">Delete selected</span></div>
+        <div class="hotkey-item"><kbd>Esc</kbd><span class="hk-label">Close modal / cancel</span></div>
+        <div class="hotkey-item"><kbd>b</kbd><span class="hk-label">Toggle sidebar</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+</div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+const state = {
+  expenses: [],
+  selectedId: null,
+  view: 'list',
+  filterCategory: null,
+  searchQuery: '',
+  loading: true,
+}
+
+const CATEGORY_COLORS = {
+  food: '#58a6ff',
+  transport: '#a78bfa',
+  entertainment: '#f8a854',
+  utilities: '#3fb950',
+  shopping: '#f082a0',
+  health: '#d299fd',
+  education: '#82c8ff',
+}
+const DEFAULT_CATEGORY_COLOR = '#8b949e'
+
+function getCategoryColor(cat) {
+  return CATEGORY_COLORS[cat && cat.toLowerCase()] || DEFAULT_CATEGORY_COLOR
+}
+
+// ============================================================
+// API Client
+// ============================================================
+const api = {
+  base: '/',
+  async request(method, path, body) {
+    const opts = { method, headers: {} }
+    if (body !== undefined) {
+      opts.headers['Content-Type'] = 'application/json'
+      opts.body = JSON.stringify(body)
+    }
+    const res = await fetch(this.base + path, opts)
+    if (res.status === 204) return null
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error(err.detail || 'Request failed')
+    }
+    return res.json()
+  },
+  list(filters = {}) {
+    const params = new URLSearchParams()
+    if (filters.category) params.set('category', filters.category)
+    if (filters.search) params.set('search', filters.search)
+    const qs = params.toString()
+    return this.request('GET', 'expenses' + (qs ? '?' + qs : ''))
+  },
+  get(id) { return this.request('GET', 'expenses/' + id) },
+  create(data) { return this.request('POST', 'expenses', data) },
+  update(id, data) { return this.request('PUT', 'expenses/' + id, data) },
+  del(id) { return this.request('DELETE', 'expenses/' + id) },
+  summary() { return this.request('GET', 'summary') },
+}
+
+// ============================================================
+// Toast System
+// ============================================================
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container')
+  const icons = {
+    success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    error: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f85149" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  }
+  const el = document.createElement('div')
+  el.className = 'toast ' + type
+  el.innerHTML = '<span class="toast-icon">' + (icons[type] || icons.info) + '</span><span class="toast-msg">' + message + '</span><button class="toast-close">&times;</button>'
+  el.querySelector('.toast-close').onclick = () => removeToast(el)
+  container.appendChild(el)
+  setTimeout(() => removeToast(el), 4000)
+}
+
+function removeToast(el) {
+  if (el.classList.contains('removing')) return
+  el.classList.add('removing')
+  setTimeout(() => el.remove(), 200)
+}
+
+// ============================================================
+// Skeleton Loaders
+// ============================================================
+function renderSkeletonList() {
+  let html = ''
+  for (let i = 0; i < 6; i++) {
+    html += '<div class="skeleton-item">'
+      + '<div class="skeleton-row"><div class="skeleton skeleton-line w60 h24"></div><div class="skeleton skeleton-line w40 h24"></div></div>'
+      + '<div class="skeleton skeleton-line w80"></div>'
+      + '<div style="display:flex;gap:8px;margin-top:8px"><div class="skeleton skeleton-badge"></div><div class="skeleton skeleton-line w40"></div></div>'
+      + '</div>'
+  }
+  return html
+}
+
+function renderSkeletonDetail() {
+  return '<div style="padding:var(--space-4) 0">'
+    + '<div class="skeleton skeleton-line w80 h32" style="margin-bottom:var(--space-6)"></div>'
+    + '<div class="skeleton skeleton-line w40"></div>'
+    + '<div class="skeleton skeleton-line w60"></div>'
+    + '<div class="skeleton skeleton-line w100"></div>'
+    + '<div class="skeleton skeleton-line w100"></div>'
+    + '<div class="skeleton skeleton-line w80" style="margin-top:var(--space-6)"></div>'
+    + '<div class="skeleton skeleton-line w60"></div>'
+    + '</div>'
+}
+
+// ============================================================
+// Simple Markdown Renderer
+// ============================================================
+function renderMarkdown(text) {
+  if (!text) return ''
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+  html = html.replace(/\[\[([^\]]+)\]\]/g, '<span class="wiki-link">$1</span>')
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
+  html = html.replace(/^\* (.+)$/gm, '<li>$1</li>')
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>')
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+  html = html.replace(/^> (.+)$/gm, '<blockquote><p>$1</p></blockquote>')
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+  html = html.replace(/\n\n/g, '</p><p>')
+  html = html.replace(/\n/g, '<br>')
+  return '<p>' + html + '</p>'
+}
+
+// ============================================================
+// UI Rendering
+// ============================================================
+function getCategoriesFromExpenses() {
+  const map = {}
+  state.expenses.forEach(e => {
+    const cat = e.category || 'uncategorized'
+    map[cat] = (map[cat] || 0) + 1
+  })
+  return Object.entries(map).sort((a, b) => b[1] - a[1])
+}
+
+function renderSidebarCategories() {
+  const container = document.getElementById('sidebar-categories')
+  const cats = getCategoriesFromExpenses()
+  const total = state.expenses.length
+
+  let html = '<div class="sidebar-item' + (!state.filterCategory ? ' active' : '') + '" data-category="">'
+    + '<span class="item-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>'
+    + 'All'
+    + '<span class="item-count">' + total + '</span>'
+    + '</div>'
+
+  cats.forEach(([cat, count]) => {
+    const color = getCategoryColor(cat)
+    const active = state.filterCategory === cat
+    html += '<div class="sidebar-item' + (active ? ' active' : '') + '" data-category="' + cat + '">'
+      + '<span class="item-dot" style="background:' + color + '"></span>'
+      + cat.charAt(0).toUpperCase() + cat.slice(1)
+      + '<span class="item-count">' + count + '</span>'
+      + '</div>'
+  })
+  container.innerHTML = html
+}
+
+function renderExpenseList() {
+  const container = document.getElementById('expense-list')
+  const countEl = document.getElementById('expense-count')
+  const q = state.searchQuery.toLowerCase()
+
+  let filtered = state.expenses
+  if (state.filterCategory) {
+    filtered = filtered.filter(e => e.category === state.filterCategory)
+  }
+  if (q) {
+    filtered = filtered.filter(e =>
+      (e.title && e.title.toLowerCase().includes(q)) ||
+      (e.description && e.description.toLowerCase().includes(q)) ||
+      (e.category && e.category.toLowerCase().includes(q))
+    )
+  }
+
+  countEl.textContent = filtered.length + ' total'
+
+  if (state.loading) {
+    container.innerHTML = renderSkeletonList()
+    return
+  }
+
+  if (!filtered.length) {
+    container.innerHTML = '<div style="padding:var(--space-8);text-align:center;color:var(--text-muted);font-size:var(--font-size-sm)">No expenses found</div>'
+    return
+  }
+
+  let html = ''
+  filtered.forEach(e => {
+    const selected = state.selectedId === e.id
+    const color = getCategoryColor(e.category)
+    const preview = (e.description || '').slice(0, 100)
+    html += '<div class="note-item' + (selected ? ' selected' : '') + '" data-id="' + e.id + '">'
+      + '<div class="note-title">'
+      + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.title || 'Untitled') + '</span>'
+      + '<span class="note-amount">$' + Number(e.amount).toFixed(2) + '</span>'
+      + '</div>'
+      + (preview ? '<div class="note-preview">' + esc(preview) + '</div>' : '')
+      + '<div class="note-meta">'
+      + '<span class="category-badge" style="background:' + color + '22;color:' + color + '">' + esc(e.category || 'other') + '</span>'
+      + '<span>' + esc(e.date || '') + '</span>'
+      + '</div>'
+      + '</div>'
+  })
+  container.innerHTML = html
+}
+
+function renderEditor() {
+  const empty = document.getElementById('editor-empty')
+  const content = document.getElementById('editor-content')
+
+  if (state.view === 'graph') return
+
+  if (!state.selectedId) {
+    empty.style.display = 'flex'
+    content.style.display = 'none'
+    return
+  }
+
+  empty.style.display = 'none'
+  content.style.display = 'block'
+
+  const expense = state.expenses.find(e => e.id === state.selectedId)
+  if (!expense) {
+    content.innerHTML = '<p style="color:var(--text-muted)">Expense not found.</p>'
+    return
+  }
+
+  const color = getCategoryColor(expense.category)
+  content.innerHTML = ''
+    + '<div class="editor-header">'
+    + '<h2>' + esc(expense.title || 'Untitled') + '</h2>'
+    + '<div class="header-actions">'
+    + '<button class="btn btn-sm" id="btn-edit-expense">'
+    + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+    + 'Edit'
+    + '</button>'
+    + '<button class="btn btn-sm btn-danger" id="btn-delete-expense">'
+    + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+    + 'Delete'
+    + '</button>'
+    + '</div>'
+    + '</div>'
+    + '<div class="editor-content">'
+    + '<div class="editor-field"><label>Amount</label><div class="field-value mono">$' + Number(expense.amount).toFixed(2) + '</div></div>'
+    + '<div class="editor-field"><label>Category</label><div class="field-value"><span class="category-badge" style="background:' + color + '22;color:' + color + '">' + esc(expense.category || 'other') + '</span></div></div>'
+    + '<div class="editor-field"><label>Date</label><div class="field-value">' + esc(expense.date || '') + '</div></div>'
+    + (expense.description ? '<div class="editor-field"><label>Description</label><div class="editor-description">' + renderMarkdown(expense.description) + '</div></div>' : '')
+    + '</div>'
+    + '<div class="editor-footer">'
+    + '<span style="font-size:var(--font-size-xs);color:var(--text-muted)">ID: ' + expense.id + '</span>'
+    + '</div>'
+
+  document.getElementById('btn-edit-expense').onclick = () => showEditForm(expense)
+  document.getElementById('btn-delete-expense').onclick = () => deleteExpense(expense.id)
+}
+
+function esc(s) {
+  if (typeof s !== 'string') return String(s || '')
+  const d = document.createElement('div')
+  d.textContent = s
+  return d.innerHTML
+}
+
+// ============================================================
+// Edit Form
+// ============================================================
+function showEditForm(expense) {
+  const content = document.getElementById('editor-content')
+  const categories = Array.from(new Set(state.expenses.map(e => e.category))).sort()
+
+  content.innerHTML = ''
+    + '<div class="editor-header">'
+    + '<h2>Edit Expense</h2>'
+    + '<div class="header-actions">'
+    + '<button class="btn btn-sm" id="btn-cancel-edit">Cancel</button>'
+    + '<button class="btn btn-sm btn-primary" id="btn-save-edit">Save</button>'
+    + '</div>'
+    + '</div>'
+    + '<div class="editor-content" id="add-form">'
+    + '<div class="editor-field"><label>Title</label><input type="text" id="edit-title" value="' + esc(expense.title) + '"></div>'
+    + '<div class="form-row">'
+    + '<div class="editor-field"><label>Amount ($)</label><input type="number" step="0.01" min="0.01" id="edit-amount" value="' + expense.amount + '"></div>'
+    + '<div class="editor-field"><label>Category</label>'
+    + '<select id="edit-category">'
+    + categories.map(c => '<option value="' + c + '"' + (c === expense.category ? ' selected' : '') + '>' + c.charAt(0).toUpperCase() + c.slice(1) + '</option>').join('')
+    + '<option value="other">Other</option>'
+    + '</select></div>'
+    + '</div>'
+    + '<div class="editor-field"><label>Date</label><input type="date" id="edit-date" value="' + expense.date + '"></div>'
+    + '<div class="editor-field"><label>Description (supports Markdown)</label><textarea id="edit-description">' + esc(expense.description || '') + '</textarea></div>'
+    + '</div>'
+
+  document.getElementById('btn-cancel-edit').onclick = () => renderEditor()
+  document.getElementById('btn-save-edit').onclick = async () => {
+    const data = {
+      title: document.getElementById('edit-title').value.trim() || 'Untitled',
+      amount: parseFloat(document.getElementById('edit-amount').value),
+      category: document.getElementById('edit-category').value,
+      date: document.getElementById('edit-date').value,
+      description: document.getElementById('edit-description').value.trim(),
+    }
+    if (!data.amount || data.amount <= 0) { showToast('Amount must be greater than 0', 'error'); return }
+    if (!data.category) { showToast('Category is required', 'error'); return }
+    if (!data.date) { showToast('Date is required', 'error'); return }
+
+    try {
+      const updated = await api.update(expense.id, data)
+      const idx = state.expenses.findIndex(e => e.id === expense.id)
+      if (idx >= 0) state.expenses[idx] = updated
+      showToast('Expense updated successfully', 'success')
+      renderSidebarCategories()
+      renderExpenseList()
+      state.selectedId = updated.id
+      renderEditor()
+    } catch (e) {
+      showToast(e.message, 'error')
+    }
+  }
+}
+
+// ============================================================
+// Add Expense Form
+// ============================================================
+function showAddForm() {
+  document.getElementById('editor-empty').style.display = 'none'
+  document.getElementById('editor-content').style.display = 'block'
+  const content = document.getElementById('editor-content')
+  const today = new Date().toISOString().slice(0, 10)
+  const categories = Array.from(new Set(state.expenses.map(e => e.category)))
+
+  content.innerHTML = ''
+    + '<div class="editor-header">'
+    + '<h2>New Expense</h2>'
+    + '<div class="header-actions">'
+    + '<button class="btn btn-sm" id="btn-cancel-add">Cancel</button>'
+    + '<button class="btn btn-sm btn-primary" id="btn-save-add">Create</button>'
+    + '</div>'
+    + '</div>'
+    + '<div class="editor-content" id="add-form">'
+    + '<div class="editor-field"><label>Title</label><input type="text" id="add-title" placeholder="e.g. Groceries"></div>'
+    + '<div class="form-row">'
+    + '<div class="editor-field"><label>Amount ($)</label><input type="number" step="0.01" min="0.01" id="add-amount" placeholder="0.00"></div>'
+    + '<div class="editor-field"><label>Category</label>'
+    + '<select id="add-category">'
+    + '<option value="">Select...</option>'
+    + categories.map(c => '<option value="' + c + '">' + c.charAt(0).toUpperCase() + c.slice(1) + '</option>').join('')
+    + '<option value="food">Food</option>'
+    + '<option value="transport">Transport</option>'
+    + '<option value="entertainment">Entertainment</option>'
+    + '<option value="utilities">Utilities</option>'
+    + '<option value="shopping">Shopping</option>'
+    + '<option value="health">Health</option>'
+    + '<option value="education">Education</option>'
+    + '<option value="other">Other</option>'
+    + '</select></div>'
+    + '</div>'
+    + '<div class="editor-field"><label>Date</label><input type="date" id="add-date" value="' + today + '"></div>'
+    + '<div class="editor-field"><label>Description (supports Markdown)</label><textarea id="add-description" placeholder="Optional description..."></textarea></div>'
+    + '</div>'
+
+  document.getElementById('btn-cancel-add').onclick = () => {
+    if (state.selectedId) renderEditor()
+    else { content.style.display = 'none'; document.getElementById('editor-empty').style.display = 'flex' }
+  }
+  document.getElementById('btn-save-add').onclick = async () => {
+    const data = {
+      title: document.getElementById('add-title').value.trim() || 'Untitled',
+      amount: parseFloat(document.getElementById('add-amount').value),
+      category: document.getElementById('add-category').value,
+      date: document.getElementById('add-date').value,
+      description: document.getElementById('add-description').value.trim(),
+    }
+    if (!data.amount || data.amount <= 0) { showToast('Amount must be greater than 0', 'error'); return }
+    if (!data.category) { showToast('Please select a category', 'error'); return }
+    if (!data.date) { showToast('Date is required', 'error'); return }
+
+    try {
+      const created = await api.create(data)
+      state.expenses.unshift(created)
+      showToast('Expense created successfully', 'success')
+      renderSidebarCategories()
+      renderExpenseList()
+      state.selectedId = created.id
+      renderEditor()
+    } catch (e) {
+      showToast(e.message, 'error')
+    }
+  }
+
+  document.getElementById('add-title').focus()
+}
+
+// ============================================================
+// Delete Expense
+// ============================================================
+async function deleteExpense(id) {
+  if (!confirm('Delete this expense?')) return
+  try {
+    await api.del(id)
+    state.expenses = state.expenses.filter(e => e.id !== id)
+    showToast('Expense deleted', 'success')
+    if (state.selectedId === id) state.selectedId = null
+    renderSidebarCategories()
+    renderExpenseList()
+    renderEditor()
+  } catch (e) {
+    showToast(e.message, 'error')
+  }
+}
+
+// ============================================================
+// Graph View (D3)
+// ============================================================
+let graphInitialized = false
+
+function renderGraph() {
+  const container = document.getElementById('graph-container')
+  const tooltip = document.getElementById('graph-tooltip')
+  container.innerHTML = ''
+
+  if (state.expenses.length < 2) {
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:var(--font-size-sm)">Need at least 2 expenses to render graph</div>'
+    graphInitialized = true
+    return
+  }
+
+  const width = container.clientWidth || 600
+  const height = container.clientHeight || 400
+
+  const nodes = state.expenses.map(e => ({
+    id: e.id,
+    label: e.title || 'Untitled',
+    amount: e.amount,
+    category: e.category || 'other',
+    expense: e,
+  }))
+
+  const catNodes = []
+  const catMap = {}
+  nodes.forEach(n => {
+    if (!catMap[n.category]) {
+      catMap[n.category] = { id: 'cat_' + n.category, label: n.category, isCategory: true, amount: 0, count: 0 }
+      catNodes.push(catMap[n.category])
+    }
+    catMap[n.category].amount += n.amount
+    catMap[n.category].count++
+  })
+
+  const allNodes = [...nodes, ...catNodes]
+  const links = []
+  nodes.forEach(n => {
+    if (catMap[n.category]) {
+      links.push({ source: n.id, target: 'cat_' + n.category, value: n.amount })
+    }
+  })
+
+  const maxAmount = Math.max(...nodes.map(n => n.amount), 1)
+  const maxCatAmount = Math.max(...catNodes.map(n => n.amount), 1)
+  const nodeRadius = d => Math.max(4, Math.min(16, 6 + (d.amount / maxAmount) * 14))
+  const catRadius = d => Math.max(10, Math.min(30, 10 + (d.amount / maxCatAmount) * 20))
+
+  const svg = d3.select('#graph-container')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height)
+
+  const defs = svg.append('defs')
+  catNodes.forEach(c => {
+    const color = getCategoryColor(c.label)
+    defs.append('radialGradient')
+      .attr('id', 'glow_' + c.label)
+      .attr('cx', '50%').attr('cy', '50%').attr('r', '50%')
+      .append('stop').attr('offset', '0%').attr('stop-color', color).attr('stop-opacity', 0.3)
+    defs.select('radialGradient:last-child')
+      .append('stop').attr('offset', '100%').attr('stop-color', color).attr('stop-opacity', 0)
+  })
+
+  const gLinks = svg.append('g')
+    .selectAll('line')
+    .data(links)
+    .join('line')
+    .attr('class', 'graph-link')
+    .attr('stroke-width', d => Math.max(1, Math.min(4, (d.value / maxAmount) * 4)))
+
+  const gNodes = svg.append('g')
+    .selectAll('g')
+    .data(allNodes)
+    .join('g')
+    .attr('class', 'graph-node')
+
+  gNodes.append('circle')
+    .attr('r', d => d.isCategory ? catRadius(d) : nodeRadius(d))
+    .attr('fill', d => d.isCategory ? getCategoryColor(d.label) : getCategoryColor(d.category))
+    .attr('opacity', d => d.isCategory ? 0.85 : 0.7)
+
+  gNodes.append('text')
+    .text(d => d.isCategory ? d.label.charAt(0).toUpperCase() + d.label.slice(1) : (d.label.length > 15 ? d.label.slice(0, 15) + '...' : d.label))
+    .attr('dy', d => d.isCategory ? catRadius(d) + 14 : nodeRadius(d) + 12)
+    .attr('text-anchor', 'middle')
+    .attr('fill', d => d.isCategory ? getCategoryColor(d.label) : 'var(--text-secondary)')
+    .attr('font-size', d => d.isCategory ? 11 : 9)
+    .attr('font-weight', d => d.isCategory ? 600 : 400)
+
+  const simulation = d3.forceSimulation(allNodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(d => d.isCategory ? 100 : 80))
+    .force('charge', d3.forceManyBody().strength(-200))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => d.isCategory ? catRadius(d) + 5 : nodeRadius(d) + 3))
+    .on('tick', () => {
+      gLinks
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y)
+      gNodes
+        .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
+    })
+
+  function drag(sim) {
+    function dragstarted(event, d) {
+      if (!event.active) sim.alphaTarget(0.3).restart()
+      d.fx = d.x
+      d.fy = d.y
+    }
+    function dragged(event, d) {
+      d.fx = event.x
+      d.fy = event.y
+    }
+    function dragended(event, d) {
+      if (!event.active) sim.alphaTarget(0)
+      d.fx = null
+      d.fy = null
+    }
+    return d3.drag()
+      .on('start', dragstarted)
+      .on('drag', dragged)
+      .on('end', dragended)
+  }
+
+  gNodes.call(drag(simulation))
+
+  gNodes.on('mouseenter', (event, d) => {
+    const rect = container.getBoundingClientRect()
+    tooltip.innerHTML = '<div class="tt-title">' + esc(d.label) + '</div>'
+    if (d.isCategory) {
+      tooltip.innerHTML += '<div class="tt-row"><span>Total</span><span>$' + d.amount.toFixed(2) + '</span></div>'
+        + '<div class="tt-row"><span>Count</span><span>' + d.count + '</span></div>'
+    } else {
+      tooltip.innerHTML += '<div class="tt-row"><span>Amount</span><span>$' + d.amount.toFixed(2) + '</span></div>'
+        + '<div class="tt-row"><span>Category</span><span>' + d.category + '</span></div>'
+        + '<div class="tt-row"><span>Date</span><span>' + d.expense.date + '</span></div>'
+    }
+    tooltip.style.left = (event.clientX - rect.left + 12) + 'px'
+    tooltip.style.top = (event.clientY - rect.top - 10) + 'px'
+    tooltip.classList.add('visible')
+
+    d3.select(event.currentTarget).select('circle').transition()
+      .duration(200)
+      .attr('opacity', 1)
+      .attr('stroke', getCategoryColor(d.category || d.label))
+      .attr('stroke-width', 3)
+  })
+
+  gNodes.on('mouseleave', (event, d) => {
+    tooltip.classList.remove('visible')
+    d3.select(event.currentTarget).select('circle').transition()
+      .duration(200)
+      .attr('opacity', d.isCategory ? 0.85 : 0.7)
+      .attr('stroke', 'var(--bg-primary)')
+      .attr('stroke-width', 2)
+  })
+
+  gNodes.on('click', (event, d) => {
+    if (d.isCategory) {
+      state.filterCategory = d.label
+      state.view = 'list'
+      renderSidebarCategories()
+      renderExpenseList()
+      switchToView('list')
+      showToast('Filtered by category: ' + d.label, 'info')
+    } else {
+      state.selectedId = d.id
+      renderExpenseList()
+      renderEditor()
+      switchToView('list')
+    }
+  })
+
+  graphInitialized = true
+}
+
+function switchToView(view) {
+  const list = document.getElementById('note-list')
+  const editor = document.getElementById('editor')
+  const graph = document.getElementById('graph-view')
+  const navItems = document.querySelectorAll('#sidebar-views .sidebar-item')
+
+  navItems.forEach(el => el.classList.remove('active'))
+
+  if (view === 'graph') {
+    list.style.display = 'none'
+    editor.style.display = 'none'
+    graph.style.display = 'flex'
+    document.querySelector('#sidebar-views [data-view="graph"]').classList.add('active')
+    if (!graphInitialized) renderGraph()
+    else {
+      const container = document.getElementById('graph-container')
+      if (container && !container.querySelector('svg')) renderGraph()
+    }
+  } else {
+    list.style.display = 'flex'
+    editor.style.display = 'flex'
+    graph.style.display = 'none'
+    document.querySelector('#sidebar-views [data-view="list"]').classList.add('active')
+    renderEditor()
+  }
+  state.view = view
+
+  if (window.innerWidth <= 768) {
+    if (state.selectedId && view !== 'graph') {
+      list.classList.add('hidden')
+      editor.classList.add('visible')
+    } else {
+      list.classList.remove('hidden')
+      editor.classList.remove('visible')
+    }
+  }
+}
+
+// ============================================================
+// Summary
+// ============================================================
+async function loadSummary() {
+  try {
+    const data = await api.summary()
+    const totalEl = document.getElementById('summary-total')
+    const countEl = document.getElementById('summary-count')
+    const total = data.by_category.reduce((s, c) => s + c.total, 0)
+    totalEl.innerHTML = '<span style="font-weight:600;font-size:var(--font-size-sm);color:var(--accent-primary)">$' + total.toFixed(2) + '</span> <span style="color:var(--text-muted)">total</span>'
+    countEl.innerHTML = '<span style="color:var(--text-secondary)">' + state.expenses.length + ' expenses</span>'
+  } catch (e) {
+    // ignore
+  }
+}
+
+// ============================================================
+// Load Data
+// ============================================================
+async function loadExpenses() {
+  state.loading = true
+  renderExpenseList()
+  try {
+    const data = await api.list()
+    state.expenses = data
+    state.loading = false
+    renderSidebarCategories()
+    renderExpenseList()
+    loadSummary()
+    if (state.selectedId) renderEditor()
+  } catch (e) {
+    state.loading = false
+    showToast('Failed to load expenses: ' + e.message, 'error')
+    renderExpenseList()
+  }
+}
+
+// ============================================================
+// Event Handlers & Init
+// ============================================================
+function init() {
+  // Sidebar collapse
+  document.querySelectorAll('.section-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const items = header.nextElementSibling
+      const icon = header.querySelector('.collapse-icon')
+      if (items.classList.contains('collapsed')) {
+        items.classList.remove('collapsed')
+        items.style.maxHeight = items.scrollHeight + 'px'
+        icon.classList.remove('collapsed')
+      } else {
+        items.style.maxHeight = items.scrollHeight + 'px'
+        requestAnimationFrame(() => {
+          items.classList.add('collapsed')
+          icon.classList.add('collapsed')
+        })
+      }
+    })
+  })
+
+  // Set initial collapse states
+  document.querySelectorAll('.section-items').forEach(el => {
+    el.style.maxHeight = el.scrollHeight + 'px'
+  })
+
+  // Sidebar category click
+  document.getElementById('sidebar-categories').addEventListener('click', (e) => {
+    const item = e.target.closest('.sidebar-item')
+    if (!item) return
+    const cat = item.dataset.category
+    state.filterCategory = cat || null
+    state.view = 'list'
+    switchToView('list')
+    renderSidebarCategories()
+    renderExpenseList()
+
+    if (window.innerWidth <= 768) {
+      document.getElementById('sidebar').classList.add('collapsed')
+      document.getElementById('sidebar-overlay').classList.remove('active')
+    }
+  })
+
+  // Sidebar views
+  document.getElementById('sidebar-views').addEventListener('click', (e) => {
+    const item = e.target.closest('.sidebar-item')
+    if (!item) return
+    const view = item.dataset.view
+    if (!view) return
+    const active = document.querySelector('#sidebar-views .sidebar-item.active')
+    if (active) active.classList.remove('active')
+    item.classList.add('active')
+
+    if (view === 'graph') {
+      switchToView('graph')
+    } else {
+      state.view = 'list'
+      switchToView('list')
+    }
+
+    if (window.innerWidth <= 768) {
+      document.getElementById('sidebar').classList.add('collapsed')
+      document.getElementById('sidebar-overlay').classList.remove('active')
+    }
+  })
+
+  // Expense list click
+  document.getElementById('expense-list').addEventListener('click', (e) => {
+    const item = e.target.closest('.note-item')
+    if (!item) return
+    const id = parseInt(item.dataset.id)
+    state.selectedId = id
+    renderExpenseList()
+    renderEditor()
+
+    if (window.innerWidth <= 768) {
+      document.getElementById('note-list').classList.add('hidden')
+      document.getElementById('editor').classList.add('visible')
+    }
+  })
+
+  // Search
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    state.searchQuery = e.target.value
+    renderExpenseList()
+  })
+
+  // Mobile sidebar toggle
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar')
+    const overlay = document.getElementById('sidebar-overlay')
+    sidebar.classList.toggle('collapsed')
+    overlay.classList.toggle('active')
+  })
+  document.getElementById('sidebar-overlay').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.add('collapsed')
+    document.getElementById('sidebar-overlay').classList.remove('active')
+  })
+
+  // Add expense buttons
+  document.getElementById('btn-add-expense').addEventListener('click', () => {
+    state.selectedId = null
+    if (state.view === 'graph') switchToView('list')
+    renderExpenseList()
+    showAddForm()
+
+    if (window.innerWidth <= 768) {
+      document.getElementById('note-list').classList.add('hidden')
+      document.getElementById('editor').classList.add('visible')
+    }
+  })
+  document.getElementById('btn-add-from-empty').addEventListener('click', () => {
+    showAddForm()
+  })
+
+  // Graph close
+  document.getElementById('btn-graph-close').addEventListener('click', () => {
+    switchToView('list')
+  })
+
+  // Hotkey modal
+  document.getElementById('hotkey-btn').addEventListener('click', () => {
+    document.getElementById('hotkey-modal').classList.add('active')
+  })
+  document.getElementById('close-hotkey-modal').addEventListener('click', () => {
+    document.getElementById('hotkey-modal').classList.remove('active')
+  })
+  document.getElementById('hotkey-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) document.getElementById('hotkey-modal').classList.remove('active')
+  })
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return
+
+    switch (e.key) {
+      case 'n':
+        e.preventDefault()
+        document.getElementById('btn-add-expense').click()
+        break
+      case '/':
+        e.preventDefault()
+        document.getElementById('search-input').focus()
+        break
+      case 'g':
+        e.preventDefault()
+        if (state.view === 'graph') switchToView('list')
+        else switchToView('graph')
+        break
+      case '?':
+        e.preventDefault()
+        document.getElementById('hotkey-btn').click()
+        break
+      case 'b':
+        e.preventDefault()
+        document.getElementById('sidebar-toggle').click()
+        break
+      case 'Escape':
+        document.getElementById('hotkey-modal').classList.remove('active')
+        break
+    }
+  })
+
+  // Resize handler
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      document.getElementById('note-list').classList.remove('hidden')
+      document.getElementById('editor').classList.remove('visible')
+      document.getElementById('sidebar').classList.remove('collapsed')
+      document.getElementById('sidebar-overlay').classList.remove('active')
+    }
+  })
+
+  // Load data
+  loadExpenses()
+}
+
+document.addEventListener('DOMContentLoaded', init)
+</script>
+</body>
+</html>
