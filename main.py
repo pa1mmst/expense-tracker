@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 from typing import Optional
 from contextlib import asynccontextmanager
+from pathlib import Path
 from database import get_connection, create_tables
 
 
@@ -34,7 +36,7 @@ def add_expense(expense: dict):
     conn = get_connection()
     cursor = conn.execute(
         "INSERT INTO expenses (title, amount, category, description, date) VALUES (?, ?, ?, ?, ?)",
-        (expense.get("title"), expense.get("amount"), expense.get("category"), expense.get("description"), expense.get("date")),
+        (expense.get("title") or "", expense.get("amount"), expense.get("category") or "", expense.get("description") or "", expense.get("date")),
     )
     conn.commit()
     row = conn.execute("SELECT * FROM expenses WHERE id = ?", (cursor.lastrowid,)).fetchone()
@@ -141,3 +143,18 @@ def get_summary():
         "by_category": [{"category": r["category"], "total": r["total"]} for r in by_category_rows],
         "monthly": [{"month": r["month"], "total": r["total"]} for r in monthly_rows],
     }
+
+
+static_dir = Path(__file__).parent / "static"
+
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    if static_dir.exists():
+        file_path = static_dir / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        index_path = static_dir / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+    raise HTTPException(status_code=404, detail="Not found")
